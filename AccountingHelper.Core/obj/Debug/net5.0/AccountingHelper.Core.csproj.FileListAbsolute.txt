@@ -1,0 +1,12 @@
+C:\projects\AccountingHelper\AccountingHelper.Core\bin\Debug\net5.0\AccountingHelper.Core.deps.json
+C:\projects\AccountingHelper\AccountingHelper.Core\bin\Debug\net5.0\AccountingHelper.Core.dll
+C:\projects\AccountingHelper\AccountingHelper.Core\bin\Debug\net5.0\ref\AccountingHelper.Core.dll
+C:\projects\AccountingHelper\AccountingHelper.Core\bin\Debug\net5.0\AccountingHelper.Core.pdb
+C:\projects\AccountingHelper\AccountingHelper.Core\obj\Debug\net5.0\AccountingHelper.Core.csproj.AssemblyReference.cache
+C:\projects\AccountingHelper\AccountingHelper.Core\obj\Debug\net5.0\AccountingHelper.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\projects\AccountingHelper\AccountingHelper.Core\obj\Debug\net5.0\AccountingHelper.Core.AssemblyInfoInputs.cache
+C:\projects\AccountingHelper\AccountingHelper.Core\obj\Debug\net5.0\AccountingHelper.Core.AssemblyInfo.cs
+C:\projects\AccountingHelper\AccountingHelper.Core\obj\Debug\net5.0\AccountingHelper.Core.csproj.CoreCompileInputs.cache
+C:\projects\AccountingHelper\AccountingHelper.Core\obj\Debug\net5.0\AccountingHelper.Core.dll
+C:\projects\AccountingHelper\AccountingHelper.Core\obj\Debug\net5.0\ref\AccountingHelper.Core.dll
+C:\projects\AccountingHelper\AccountingHelper.Core\obj\Debug\net5.0\AccountingHelper.Core.pdb

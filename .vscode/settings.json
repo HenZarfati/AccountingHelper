@@ -1,0 +1,8 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "ms-dotnettools.csharp",
+  "files.exclude": {
+    "**/bin": true,
+    "**/obj": true
+  }
+}

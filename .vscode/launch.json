@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch AccountingHelper",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/AccountingHelper.UI/bin/Debug/net8.0-windows/AccountingHelper.UI.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}/AccountingHelper.UI",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    }
+  ]
+}

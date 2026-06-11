@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "AccountingHelper.UI/1.0.0": {
+        "dependencies": {
+          "AccountingHelper.Core": "1.0.0"
+        },
+        "runtime": {
+          "AccountingHelper.UI.dll": {}
+        }
+      },
+      "AccountingHelper.Core/1.0.0": {
+        "runtime": {
+          "AccountingHelper.Core.dll": {
+            "assemblyVersion": "1.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "AccountingHelper.UI/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "AccountingHelper.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
