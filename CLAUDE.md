@@ -27,6 +27,8 @@ After every code change, always:
 
 Do this at the end of every task, without being asked.
 
+**GitHub permissions:** Never delete a repository, branch, or any remote resource without explicit user approval. Always ask first before any destructive GitHub action.
+
 ## Architecture
 
 Two-project solution:

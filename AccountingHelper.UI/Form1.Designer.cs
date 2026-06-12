@@ -1,40 +1,83 @@
-﻿namespace AccountingHelper.UI
+namespace AccountingHelper.UI
 {
     partial class Form1
     {
-        /// <summary>
-        ///  Required designer variable.
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary>
-        ///  Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
-            {
                 components.Dispose();
-            }
             base.Dispose(disposing);
         }
 
-        #region Windows Form Designer generated code
-
-        /// <summary>
-        ///  Required method for Designer support - do not modify
-        ///  the contents of this method with the code editor.
-        /// </summary>
         private void InitializeComponent()
         {
-            this.components = new System.ComponentModel.Container();
+            this.lblTitle = new System.Windows.Forms.Label();
+            this.btnUpload = new System.Windows.Forms.Button();
+            this.lblFilePath = new System.Windows.Forms.Label();
+            this.btnProcess = new System.Windows.Forms.Button();
+            this.lblStatus = new System.Windows.Forms.Label();
+            this.SuspendLayout();
+
+            // lblTitle
+            this.lblTitle.AutoSize = true;
+            this.lblTitle.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Bold);
+            this.lblTitle.Location = new System.Drawing.Point(30, 22);
+            this.lblTitle.Name = "lblTitle";
+            this.lblTitle.Text = "Excel Processor";
+
+            // btnUpload
+            this.btnUpload.Location = new System.Drawing.Point(30, 75);
+            this.btnUpload.Name = "btnUpload";
+            this.btnUpload.Size = new System.Drawing.Size(150, 34);
+            this.btnUpload.Text = "Upload Excel File";
+            this.btnUpload.UseVisualStyleBackColor = true;
+            this.btnUpload.Click += new System.EventHandler(this.btnUpload_Click);
+
+            // lblFilePath
+            this.lblFilePath.AutoSize = false;
+            this.lblFilePath.ForeColor = System.Drawing.Color.Gray;
+            this.lblFilePath.Location = new System.Drawing.Point(195, 83);
+            this.lblFilePath.Name = "lblFilePath";
+            this.lblFilePath.Size = new System.Drawing.Size(555, 20);
+            this.lblFilePath.Text = "No file selected";
+
+            // btnProcess
+            this.btnProcess.Enabled = false;
+            this.btnProcess.Location = new System.Drawing.Point(30, 130);
+            this.btnProcess.Name = "btnProcess";
+            this.btnProcess.Size = new System.Drawing.Size(180, 34);
+            this.btnProcess.Text = "Process && Download";
+            this.btnProcess.UseVisualStyleBackColor = true;
+            this.btnProcess.Click += new System.EventHandler(this.btnProcess_Click);
+
+            // lblStatus
+            this.lblStatus.AutoSize = false;
+            this.lblStatus.Location = new System.Drawing.Point(30, 185);
+            this.lblStatus.Name = "lblStatus";
+            this.lblStatus.Size = new System.Drawing.Size(740, 40);
+            this.lblStatus.Text = "";
+
+            // Form1
+            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Text = "Form1";
+            this.ClientSize = new System.Drawing.Size(800, 260);
+            this.Controls.Add(this.lblTitle);
+            this.Controls.Add(this.btnUpload);
+            this.Controls.Add(this.lblFilePath);
+            this.Controls.Add(this.btnProcess);
+            this.Controls.Add(this.lblStatus);
+            this.Name = "Form1";
+            this.Text = "Accounting Helper";
+            this.ResumeLayout(false);
+            this.PerformLayout();
         }
 
-        #endregion
+        private System.Windows.Forms.Label lblTitle;
+        private System.Windows.Forms.Button btnUpload;
+        private System.Windows.Forms.Label lblFilePath;
+        private System.Windows.Forms.Button btnProcess;
+        private System.Windows.Forms.Label lblStatus;
     }
 }
-
