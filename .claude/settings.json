@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cd c:\\\\projects\\\\AccountingHelper; $proc = Get-Process -Name \"AccountingHelper.UI\" -ErrorAction SilentlyContinue; if \\($proc\\) { Write-Output \"STILL RUNNING \\(PID $\\($proc.Id\\)\\)\" } else { Write-Output \"building...\"; dotnet build AccountingHelper.sln 2>&1 | Select-Object -Last 4 })"
+    ]
+  }
+}

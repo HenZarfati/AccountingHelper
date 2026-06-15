@@ -105,17 +105,18 @@ namespace AccountingHelper.Core.Services
                 string cpiFlag    = colCpi        > 0 ? StripInvisible(row.Cell(colCpi).GetString())        : "";
                 string currency   = colCurrency   > 0 ? StripInvisible(row.Cell(colCurrency).GetString())   : "";
 
-                // 1. Copy שם פריט בחשבונית → הערות להנה"ח
-                if (colNotes > 0 && !string.IsNullOrEmpty(itemName))
-                    row.Cell(colNotes).Value = itemName;
-
-                // 2. Advance date in שם פריט בחשבונית if row has a number in מפתח פריט
+                // 1. Advance date in שם פריט בחשבונית if row has a number in מפתח פריט.
+                //    (If * in מפתח פריט — no change to שם פריט.)
+                string finalItemName = itemName;
                 if (colItemName > 0 && IsNumeric(itemKey))
                 {
-                    string advanced = AdvanceDateInText(itemName);
-                    row.Cell(colItemName).Value = advanced;
+                    finalItemName = AdvanceDateInText(itemName);
+                    row.Cell(colItemName).Value = finalItemName;
                 }
-                // If * in מפתח פריט — no change to שם פריט
+
+                // 2. Copy the (now date-updated) שם פריט בחשבונית → הערות להנה"ח
+                if (colNotes > 0 && !string.IsNullOrEmpty(finalItemName))
+                    row.Cell(colNotes).Value = finalItemName;
 
                 // 3. CPI indexation
                 if (colCpi > 0 && cpiFlag.Contains("צמוד"))
