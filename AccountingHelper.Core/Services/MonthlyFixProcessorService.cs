@@ -1,5 +1,6 @@
 using ClosedXML.Excel;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -37,10 +38,10 @@ namespace AccountingHelper.Core.Services
             using var workbook = new XLWorkbook(inputFilePath);
             var ws = workbook.Worksheets.First();
 
-            // Map column headers to indices
+            // Map column headers to indices (strip invisible Unicode direction markers Excel embeds in Hebrew text)
             int lastCol = ws.LastColumnUsed().ColumnNumber();
             var headers = Enumerable.Range(1, lastCol)
-                .ToDictionary(c => ws.Cell(1, c).GetString().Trim(), c => c);
+                .ToDictionary(c => StripInvisible(ws.Cell(1, c).GetString()), c => c);
 
             int colItemKey      = FindCol(headers, "מפתח פריט");
             int colAccountKey   = FindCol(headers, "מפתח חשבון");
@@ -48,10 +49,24 @@ namespace AccountingHelper.Core.Services
             int colCpi          = FindCol(headers, "מדד המחירים לצרכן");
             int colBaseIndex    = FindCol(headers, "מדד בסיס");
             int colIndexDate    = FindCol(headers, "תאריך למדד");
-            int colPriceAfter   = FindCol(headers, "מחיר אחרי עצמדה");
-            int colCurrency     = FindCol(headers, "מטבע");
+            // Try both spellings — "הצמדה" is correct Hebrew; "עצמדה" was an earlier typo
+            int colPriceAfter   = FindCol(headers, "מחיר אחרי הצמדה");
+            if (colPriceAfter < 0) colPriceAfter = FindCol(headers, "מחיר אחרי עצמדה");
+            int colCurrency     = FindCol(headers, "מטבע (₪ או $)");
             int colRate         = FindCol(headers, "שער");
             int colNotes        = FindCol(headers, "הערות להנה\"ח");
+            if (colNotes < 0) colNotes = FindCol(headers, "הערות להנה'ח");
+
+            // Surface missing required columns as a clear error
+            var missing = new List<string>();
+            if (colItemName   < 0) missing.Add("שם פריט בחשבונית");
+            if (colCpi        < 0) missing.Add("מדד המחירים לצרכן");
+            if (colPriceAfter < 0) missing.Add("מחיר אחרי הצמדה");
+            if (colCurrency   < 0) missing.Add("מטבע (₪ או $)");
+            if (colRate       < 0) missing.Add("שער");
+            if (missing.Count > 0)
+                throw new InvalidOperationException($"העמודות הבאות לא נמצאו בקובץ: {string.Join(", ", missing)}");
+
 
             // Pre-scan: find the "הצמדה למדד" target row (מפתח חשבון=22211 AND שם פריט=הצמדה למדד)
             int lastRow = ws.LastRowUsed().RowNumber();
@@ -77,11 +92,11 @@ namespace AccountingHelper.Core.Services
             {
                 var row = ws.Row(r);
 
-                string itemKey   = colItemKey    > 0 ? row.Cell(colItemKey).GetString().Trim()    : "";
-                string accountKey = colAccountKey > 0 ? row.Cell(colAccountKey).GetString().Trim() : "";
-                string itemName  = colItemName   > 0 ? row.Cell(colItemName).GetString().Trim()   : "";
-                string cpiFlag   = colCpi        > 0 ? row.Cell(colCpi).GetString().Trim()        : "";
-                string currency  = colCurrency   > 0 ? row.Cell(colCurrency).GetString().Trim()   : "";
+                string itemKey    = colItemKey    > 0 ? StripInvisible(row.Cell(colItemKey).GetString())    : "";
+                string accountKey = colAccountKey > 0 ? StripInvisible(row.Cell(colAccountKey).GetString()) : "";
+                string itemName   = colItemName   > 0 ? StripInvisible(row.Cell(colItemName).GetString())   : "";
+                string cpiFlag    = colCpi        > 0 ? StripInvisible(row.Cell(colCpi).GetString())        : "";
+                string currency   = colCurrency   > 0 ? StripInvisible(row.Cell(colCurrency).GetString())   : "";
 
                 // 1. Copy שם פריט בחשבונית → הערות להנה"ח
                 if (colNotes > 0 && !string.IsNullOrEmpty(itemName))
@@ -115,7 +130,7 @@ namespace AccountingHelper.Core.Services
                 }
 
                 // 4. USD rate
-                if (colCurrency > 0 && currency == "$")
+                if (colCurrency > 0 && currency.Contains("$"))
                 {
                     if (usdRate == null)
                         usdRate = await _exchangeRateService.GetUsdRateForDateAsync(targetDate);
@@ -278,11 +293,27 @@ namespace AccountingHelper.Core.Services
         private bool IsNumeric(string value) =>
             !string.IsNullOrWhiteSpace(value) && Regex.IsMatch(value.Trim(), @"^\d+$");
 
-        private int FindCol(System.Collections.Generic.Dictionary<string, int> headers, string name)
+        private int FindCol(Dictionary<string, int> headers, string name)
         {
+            string normalized = StripInvisible(name);
             foreach (var key in headers.Keys)
-                if (key.Trim() == name.Trim()) return headers[key];
+                if (key == normalized) return headers[key];
             return -1;
+        }
+
+        // Strips invisible Unicode direction/formatting markers Excel embeds in RTL text
+        private static string StripInvisible(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return s;
+            return new string(s.Where(c =>
+                c != '‏' && // RIGHT-TO-LEFT MARK
+                c != '‎' && // LEFT-TO-RIGHT MARK
+                c != '​' && // ZERO WIDTH SPACE
+                c != '‪' && // LEFT-TO-RIGHT EMBEDDING
+                c != '‫' && // RIGHT-TO-LEFT EMBEDDING
+                c != '‬' && // POP DIRECTIONAL FORMATTING
+                c != '﻿'    // BYTE ORDER MARK
+            ).ToArray()).Trim();
         }
     }
 }
