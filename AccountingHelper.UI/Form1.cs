@@ -9,6 +9,7 @@ namespace AccountingHelper.UI
     {
         private string _selectedFilePath;
         private readonly ExcelProcessorService _processor = new ExcelProcessorService();
+        private readonly MonthlyFixProcessorService _monthlyProcessor = new MonthlyFixProcessorService();
 
         public Form1()
         {
@@ -29,6 +30,7 @@ namespace AccountingHelper.UI
                 lblFilePath.Text = _selectedFilePath;
                 lblFilePath.ForeColor = Color.Black;
                 btnProcess.Enabled = true;
+                btnMonthlyFix.Enabled = true;
                 lblStatus.Text = "";
             }
         }
@@ -36,6 +38,7 @@ namespace AccountingHelper.UI
         private async void btnProcess_Click(object sender, EventArgs e)
         {
             btnProcess.Enabled = false;
+            btnMonthlyFix.Enabled = false;
             btnUpload.Enabled = false;
             lblStatus.ForeColor = Color.DarkBlue;
             lblStatus.Text = "Processing... fetching live USD rate and calculating...";
@@ -53,6 +56,34 @@ namespace AccountingHelper.UI
             }
             finally
             {
+                btnProcess.Enabled = true;
+                btnMonthlyFix.Enabled = true;
+                btnUpload.Enabled = true;
+            }
+        }
+
+        private async void btnMonthlyFix_Click(object sender, EventArgs e)
+        {
+            btnMonthlyFix.Enabled = false;
+            btnProcess.Enabled = false;
+            btnUpload.Enabled = false;
+            lblStatus.ForeColor = Color.DarkBlue;
+            lblStatus.Text = "מעבד... מביא שערי מטבע ומדד מחירים...";
+
+            try
+            {
+                string outputPath = await _monthlyProcessor.ProcessAsync(_selectedFilePath);
+                lblStatus.ForeColor = Color.DarkGreen;
+                lblStatus.Text = $"הושלם! נשמר ב: {outputPath}";
+            }
+            catch (Exception ex)
+            {
+                lblStatus.ForeColor = Color.Red;
+                lblStatus.Text = $"שגיאה: {ex.Message}";
+            }
+            finally
+            {
+                btnMonthlyFix.Enabled = true;
                 btnProcess.Enabled = true;
                 btnUpload.Enabled = true;
             }
