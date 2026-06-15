@@ -50,6 +50,8 @@ namespace AccountingHelper.UI
             {
                 lblStatus.ForeColor = Color.Red;
                 lblStatus.Text = $"שגיאה: {ex.Message}";
+                // The label truncates long URLs — show the full error so it can be read/screenshotted
+                MessageBox.Show(ex.Message, "שגיאה", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
