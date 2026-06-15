@@ -16,7 +16,6 @@ namespace AccountingHelper.UI
             this.lblTitle = new System.Windows.Forms.Label();
             this.btnUpload = new System.Windows.Forms.Button();
             this.lblFilePath = new System.Windows.Forms.Label();
-            this.btnProcess = new System.Windows.Forms.Button();
             this.btnMonthlyFix = new System.Windows.Forms.Button();
             this.lblStatus = new System.Windows.Forms.Label();
             this.SuspendLayout();
@@ -44,18 +43,9 @@ namespace AccountingHelper.UI
             this.lblFilePath.Size = new System.Drawing.Size(555, 20);
             this.lblFilePath.Text = "No file selected";
 
-            // btnProcess
-            this.btnProcess.Enabled = false;
-            this.btnProcess.Location = new System.Drawing.Point(30, 130);
-            this.btnProcess.Name = "btnProcess";
-            this.btnProcess.Size = new System.Drawing.Size(180, 34);
-            this.btnProcess.Text = "Process && Download";
-            this.btnProcess.UseVisualStyleBackColor = true;
-            this.btnProcess.Click += new System.EventHandler(this.btnProcess_Click);
-
             // btnMonthlyFix
             this.btnMonthlyFix.Enabled = false;
-            this.btnMonthlyFix.Location = new System.Drawing.Point(220, 130);
+            this.btnMonthlyFix.Location = new System.Drawing.Point(30, 130);
             this.btnMonthlyFix.Name = "btnMonthlyFix";
             this.btnMonthlyFix.Size = new System.Drawing.Size(180, 34);
             this.btnMonthlyFix.Text = "עיבוד חודשי";
@@ -76,7 +66,6 @@ namespace AccountingHelper.UI
             this.Controls.Add(this.lblTitle);
             this.Controls.Add(this.btnUpload);
             this.Controls.Add(this.lblFilePath);
-            this.Controls.Add(this.btnProcess);
             this.Controls.Add(this.btnMonthlyFix);
             this.Controls.Add(this.lblStatus);
             this.Name = "Form1";
@@ -88,7 +77,6 @@ namespace AccountingHelper.UI
         private System.Windows.Forms.Label lblTitle;
         private System.Windows.Forms.Button btnUpload;
         private System.Windows.Forms.Label lblFilePath;
-        private System.Windows.Forms.Button btnProcess;
         private System.Windows.Forms.Button btnMonthlyFix;
         private System.Windows.Forms.Label lblStatus;
     }

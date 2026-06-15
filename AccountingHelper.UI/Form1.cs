@@ -8,7 +8,6 @@ namespace AccountingHelper.UI
     public partial class Form1 : Form
     {
         private string _selectedFilePath;
-        private readonly ExcelProcessorService _processor = new ExcelProcessorService();
         private readonly MonthlyFixProcessorService _monthlyProcessor = new MonthlyFixProcessorService();
 
         public Form1()
@@ -29,43 +28,14 @@ namespace AccountingHelper.UI
                 _selectedFilePath = dialog.FileName;
                 lblFilePath.Text = _selectedFilePath;
                 lblFilePath.ForeColor = Color.Black;
-                btnProcess.Enabled = true;
                 btnMonthlyFix.Enabled = true;
                 lblStatus.Text = "";
-            }
-        }
-
-        private async void btnProcess_Click(object sender, EventArgs e)
-        {
-            btnProcess.Enabled = false;
-            btnMonthlyFix.Enabled = false;
-            btnUpload.Enabled = false;
-            lblStatus.ForeColor = Color.DarkBlue;
-            lblStatus.Text = "Processing... fetching live USD rate and calculating...";
-
-            try
-            {
-                string outputPath = await _processor.ProcessAsync(_selectedFilePath);
-                lblStatus.ForeColor = Color.DarkGreen;
-                lblStatus.Text = $"Done! Saved to: {outputPath}";
-            }
-            catch (Exception ex)
-            {
-                lblStatus.ForeColor = Color.Red;
-                lblStatus.Text = $"Error: {ex.Message}";
-            }
-            finally
-            {
-                btnProcess.Enabled = true;
-                btnMonthlyFix.Enabled = true;
-                btnUpload.Enabled = true;
             }
         }
 
         private async void btnMonthlyFix_Click(object sender, EventArgs e)
         {
             btnMonthlyFix.Enabled = false;
-            btnProcess.Enabled = false;
             btnUpload.Enabled = false;
             lblStatus.ForeColor = Color.DarkBlue;
             lblStatus.Text = "מעבד... מביא שערי מטבע ומדד מחירים...";
@@ -84,7 +54,6 @@ namespace AccountingHelper.UI
             finally
             {
                 btnMonthlyFix.Enabled = true;
-                btnProcess.Enabled = true;
                 btnUpload.Enabled = true;
             }
         }
