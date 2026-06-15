@@ -15,6 +15,18 @@ namespace AccountingHelper.Core.Services
             "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"
         };
 
+        private static readonly string[] EnglishMonthsFull =
+        {
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        };
+
+        private static readonly string[] EnglishMonthsAbbr =
+        {
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        };
+
         private readonly ExchangeRateService _exchangeRateService = new ExchangeRateService();
         private readonly CpiCalculatorService _cpiService = new CpiCalculatorService();
 
@@ -127,7 +139,7 @@ namespace AccountingHelper.Core.Services
         }
 
         // Advances the first date found in the text by 1 month.
-        // Supports: MM/YYYY, MM-YYYY, Hebrew month names
+        // Supports: MM/YYYY, MM-YYYY, Hebrew month names, English full names, English 3-letter abbreviations
         private string AdvanceDateInText(string text)
         {
             // Try MM/YYYY or MM-YYYY
@@ -146,7 +158,6 @@ namespace AccountingHelper.Core.Services
             {
                 if (text.Contains(HebrewMonths[i]))
                 {
-                    // Find the year after the Hebrew month
                     var yearMatch = Regex.Match(text, HebrewMonths[i] + @"\s+(\d{4})");
                     if (yearMatch.Success)
                     {
@@ -157,14 +168,69 @@ namespace AccountingHelper.Core.Services
                     }
                     else
                     {
-                        // No year — just replace month name
                         int nextIndex = (i + 1) % 12;
                         return text.Replace(HebrewMonths[i], HebrewMonths[nextIndex]);
                     }
                 }
             }
 
+            // Try English month name (full names checked before abbreviations so "March" beats "Mar")
+            string engPattern = string.Join("|",
+                EnglishMonthsFull.Concat(EnglishMonthsAbbr)
+                                 .Distinct()
+                                 .OrderByDescending(m => m.Length));
+            var engMatch = Regex.Match(text, engPattern, RegexOptions.IgnoreCase);
+            if (engMatch.Success)
+            {
+                string matched = engMatch.Value;
+                bool useAbbr = matched.Length == 3;
+
+                int monthIdx = -1;
+                for (int i = 0; i < 12; i++)
+                {
+                    if (string.Equals(matched, EnglishMonthsFull[i], StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(matched, EnglishMonthsAbbr[i], StringComparison.OrdinalIgnoreCase))
+                    {
+                        monthIdx = i;
+                        break;
+                    }
+                }
+
+                if (monthIdx >= 0)
+                {
+                    // Try to find a year after the month name to also advance the year
+                    var yearMatch = Regex.Match(text, Regex.Escape(matched) + @"\s+(\d{4})", RegexOptions.IgnoreCase);
+                    int nextMonth, nextYear;
+                    if (yearMatch.Success)
+                    {
+                        int year = int.Parse(yearMatch.Groups[1].Value);
+                        var next = new DateTime(year, monthIdx + 1, 1).AddMonths(1);
+                        nextMonth = next.Month;
+                        nextYear  = next.Year;
+                        string nextName = useAbbr ? EnglishMonthsAbbr[nextMonth - 1] : EnglishMonthsFull[nextMonth - 1];
+                        nextName = ApplyEnglishCase(matched, nextName);
+                        return text.Substring(0, yearMatch.Index) + $"{nextName} {nextYear}" + text.Substring(yearMatch.Index + yearMatch.Length);
+                    }
+                    else
+                    {
+                        int nextIdx = (monthIdx + 1) % 12;
+                        string nextName = useAbbr ? EnglishMonthsAbbr[nextIdx] : EnglishMonthsFull[nextIdx];
+                        nextName = ApplyEnglishCase(matched, nextName);
+                        return text.Substring(0, engMatch.Index) + nextName + text.Substring(engMatch.Index + engMatch.Length);
+                    }
+                }
+            }
+
             return text;
+        }
+
+        // Matches the casing style of the original English month token onto the replacement
+        private string ApplyEnglishCase(string original, string replacement)
+        {
+            if (original == original.ToUpperInvariant()) return replacement.ToUpperInvariant();
+            if (original == original.ToLowerInvariant()) return replacement.ToLowerInvariant();
+            // Title case (first letter upper, rest lower) — default for month names
+            return char.ToUpper(replacement[0]) + replacement.Substring(1).ToLower();
         }
 
         // Parses dates like MM/YYYY, MM-YYYY, YYYY-MM, or Hebrew month + year
