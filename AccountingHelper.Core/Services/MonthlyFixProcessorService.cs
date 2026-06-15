@@ -147,9 +147,11 @@ namespace AccountingHelper.Core.Services
                     {
                         decimal indexed = await _cpiService.CalculateIndexedAmountAsync(baseAmount, baseDate, targetDate);
 
-                        // If מפתח חשבון = 22211, write result to the "הצמדה למדד" row instead of current row
+                        // If מפתח חשבון = 22211, the "הצמדה למדד" line carries only the indexation
+                        // increment (indexed − base), not the full re-indexed price; write it there.
+                        // Otherwise the row's own מחיר אחרי הצמדה gets the full re-indexed value.
                         if (accountKey == "22211" && indexationTargetRow > 0 && colPriceAfter > 0)
-                            ws.Row(indexationTargetRow).Cell(colPriceAfter).Value = indexed;
+                            ws.Row(indexationTargetRow).Cell(colPriceAfter).Value = Math.Round(indexed - baseAmount, 2);
                         else if (colPriceAfter > 0)
                             row.Cell(colPriceAfter).Value = indexed;
                     }
