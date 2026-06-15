@@ -39,13 +39,13 @@ namespace AccountingHelper.Core.Services
         }
 
         // Calculates the indexed amount using CBS series-linked CPI.
-        // CBS convention: use CPI of the month BEFORE each reference date.
+        // Uses the "known index" (מדד ידוע) for each reference date (see GetKnownIndexMonth).
         // When base and target are in different CBS base-year series, accumulates
         // linking factors (avg of transition year / 100) across each series boundary.
         public async Task<decimal> CalculateIndexedAmountAsync(decimal baseAmount, DateTime baseDate, DateTime targetDate)
         {
-            var baseCpiMonth   = baseDate.AddMonths(-1);
-            var targetCpiMonth = targetDate.AddMonths(-1);
+            var baseCpiMonth   = GetKnownIndexMonth(baseDate);
+            var targetCpiMonth = GetKnownIndexMonth(targetDate);
 
             var (baseCpi,   baseSeries)   = await GetCpiWithSeriesAsync(baseCpiMonth);
             var (targetCpi, targetSeries) = await GetCpiWithSeriesAsync(targetCpiMonth);
@@ -58,6 +58,14 @@ namespace AccountingHelper.Core.Services
             decimal linkingFactor = await GetAccumulatedLinkingFactorAsync(baseSeries, targetSeries);
             return Math.Round(baseAmount * ratio * linkingFactor, 2);
         }
+
+        // Returns the month of the "known index" (מדד ידוע) for a given date.
+        // The CBS publishes each month's index on the 15th of the following month, so:
+        //   day >= 16 -> previous month's index is already published (use month - 1)
+        //   day <= 15 -> previous month not yet published (use month - 2)
+        // e.g. 16/07/2008 -> Jun 2008; 15/08/2017 -> Jun 2017.
+        private static DateTime GetKnownIndexMonth(DateTime date)
+            => date.Day >= 16 ? date.AddMonths(-1) : date.AddMonths(-2);
 
         // Gets the CPI value and its base-series name for a given month.
         // Falls back to the previous month if current month data not yet published.
