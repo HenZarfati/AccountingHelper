@@ -58,15 +58,21 @@ namespace AccountingHelper.Core.Services
             int colNotes        = FindCol(headers, "הערות להנה\"ח");
             if (colNotes < 0) colNotes = FindCol(headers, "הערות להנה'ח");
 
-            // Surface missing required columns as a clear error
+            // Surface missing required columns as a clear error (include all found headers for diagnosis)
             var missing = new List<string>();
             if (colItemName   < 0) missing.Add("שם פריט בחשבונית");
             if (colCpi        < 0) missing.Add("מדד המחירים לצרכן");
+            if (colBaseIndex  < 0) missing.Add("מדד בסיס");
+            if (colIndexDate  < 0) missing.Add("תאריך למדד");
             if (colPriceAfter < 0) missing.Add("מחיר אחרי הצמדה");
             if (colCurrency   < 0) missing.Add("מטבע (₪ או $)");
             if (colRate       < 0) missing.Add("שער");
             if (missing.Count > 0)
-                throw new InvalidOperationException($"העמודות הבאות לא נמצאו בקובץ: {string.Join(", ", missing)}");
+            {
+                string allHeaders = string.Join(" | ", headers.Keys);
+                throw new InvalidOperationException(
+                    $"העמודות הבאות לא נמצאו: {string.Join(", ", missing)}\n\nכותרות שנמצאו בקובץ: {allHeaders}");
+            }
 
 
             // Pre-scan: find the "הצמדה למדד" target row (מפתח חשבון=22211 AND שם פריט=הצמדה למדד)
@@ -147,11 +153,7 @@ namespace AccountingHelper.Core.Services
                         else if (colPriceAfter > 0)
                             row.Cell(colPriceAfter).Value = indexed;
                     }
-                    else
-                    {
-                        throw new InvalidOperationException(
-                            $"שורה {r}: לא ניתן לקרוא את ערך המדד הבסיס ({baseAmount}) או תאריך המדד מהתא. בדוק את עמודות 'מדד בסיס' ו-'תאריך למדד'.");
-                    }
+                    // If base amount or date is missing for this row, skip it silently
                 }
 
                 // 4. USD rate
