@@ -60,7 +60,7 @@ namespace AccountingHelper.Core.Services
                 string period = $"{m.Month:D2}-{m.Year}";
                 string url = $"https://api.cbs.gov.il/index/data/price?id={CpiIndexId}&startPeriod={period}&endPeriod={period}&format=json&lang=he&download=false";
 
-                var json = await _http.GetStringAsync(url);
+                var json = await HttpRetryHelper.GetStringAsync(_http, url);
                 using var doc = JsonDocument.Parse(json);
                 var dates = doc.RootElement.GetProperty("month")[0].GetProperty("date");
 
@@ -107,7 +107,7 @@ namespace AccountingHelper.Core.Services
         private async Task<decimal> GetLinkingFactorForYearAsync(int refYear)
         {
             string url = $"https://api.cbs.gov.il/index/data/price?id={CpiIndexId}&startPeriod=01-{refYear}&endPeriod=12-{refYear}&format=json&lang=he&download=false&Page=1&PageSize=100";
-            var json = await _http.GetStringAsync(url);
+            var json = await HttpRetryHelper.GetStringAsync(_http, url);
             using var doc = JsonDocument.Parse(json);
 
             var dates = doc.RootElement.GetProperty("month")[0].GetProperty("date");

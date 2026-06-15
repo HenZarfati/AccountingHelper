@@ -36,7 +36,7 @@ namespace AccountingHelper.Core.Services
             string url = "https://edge.boi.org.il/FusionEdgeServer/sdmx/v2/data/dataflow/BOI.STATISTICS/EXR/1.0/" +
                          $"?c[DATA_TYPE]=OF00&c[BASE_CURRENCY]=USD&startperiod={start}&endperiod={end}&format=csv";
 
-            string csv = await _httpClient.GetStringAsync(url);
+            string csv = await HttpRetryHelper.GetStringAsync(_httpClient, url);
 
             var lines = csv.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
             if (lines.Length < 2)
