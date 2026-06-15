@@ -48,28 +48,31 @@ namespace AccountingHelper.Core.Services
             XNamespace ns = "http://www.cbs.gov.il";
 
             // Try to find the value element — CBS XML structure has a "VALUE" or "val" element
-            foreach (var el in doc.Descendants())
-            {
-                if ((el.Name.LocalName == "VALUE" || el.Name.LocalName == "val" || el.Name.LocalName == "Value") &&
-                    decimal.TryParse(el.Value, out decimal cpi) && cpi > 0)
-                    return cpi;
-            }
+            decimal val = ExtractCpiValue(doc);
+            if (val > 0) return val;
 
             // Fallback: try last available month if current month not yet published
             string fallbackPeriod = $"{date.AddMonths(-1).Month:D2}-{date.AddMonths(-1).Year}";
             string fallbackUrl = $"https://api.cbs.gov.il/index/data/price?id={CpiIndexId}&startPeriod={fallbackPeriod}&endPeriod={fallbackPeriod}&format=xml&lang=he&download=false";
 
             var fallbackXml = await _http.GetStringAsync(fallbackUrl);
-            var fallbackDoc = XDocument.Parse(fallbackXml);
-
-            foreach (var el in fallbackDoc.Descendants())
-            {
-                if ((el.Name.LocalName == "VALUE" || el.Name.LocalName == "val" || el.Name.LocalName == "Value") &&
-                    decimal.TryParse(el.Value, out decimal cpi) && cpi > 0)
-                    return cpi;
-            }
+            decimal fallbackVal = ExtractCpiValue(XDocument.Parse(fallbackXml));
+            if (fallbackVal > 0) return fallbackVal;
 
             throw new InvalidOperationException($"Could not retrieve CPI value for {period} from CBS API.");
+        }
+
+        // CBS API returns <value>104.9</value> inside <currBase> — match case-insensitively
+        private static decimal ExtractCpiValue(XDocument doc)
+        {
+            foreach (var el in doc.Descendants())
+            {
+                if (string.Equals(el.Name.LocalName, "value", StringComparison.OrdinalIgnoreCase) &&
+                    decimal.TryParse(el.Value, System.Globalization.NumberStyles.Any,
+                                     System.Globalization.CultureInfo.InvariantCulture, out decimal cpi) && cpi > 0)
+                    return cpi;
+            }
+            return 0;
         }
     }
 }
