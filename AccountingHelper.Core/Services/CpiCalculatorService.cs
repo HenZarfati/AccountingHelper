@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -10,6 +11,14 @@ namespace AccountingHelper.Core.Services
     {
         private static readonly HttpClient _http = new HttpClient();
         private const string CpiIndexId = "120010";
+
+        // Historical CPI is immutable, so cache results to avoid re-fetching the same
+        // month/year across rows. The target month and all linking factors are identical
+        // for every row in a file — without this each row repeats ~11 slow CBS calls.
+        private static readonly ConcurrentDictionary<string, (decimal cpi, string series)> _cpiCache =
+            new ConcurrentDictionary<string, (decimal, string)>();
+        private static readonly ConcurrentDictionary<int, decimal> _linkingFactorCache =
+            new ConcurrentDictionary<int, decimal>();
 
         static CpiCalculatorService()
         {
@@ -54,6 +63,10 @@ namespace AccountingHelper.Core.Services
         // Falls back to the previous month if current month data not yet published.
         private async Task<(decimal cpi, string series)> GetCpiWithSeriesAsync(DateTime month)
         {
+            string cacheKey = $"{month.Month:D2}-{month.Year}";
+            if (_cpiCache.TryGetValue(cacheKey, out var cached))
+                return cached;
+
             for (int attempt = 0; attempt < 2; attempt++)
             {
                 var m = month.AddMonths(-attempt);
@@ -69,7 +82,9 @@ namespace AccountingHelper.Core.Services
                     var entry  = dates[0];
                     decimal cpi = entry.GetProperty("currBase").GetProperty("value").GetDecimal();
                     string series = entry.GetProperty("currBase").GetProperty("baseDesc").GetString() ?? "";
-                    return (cpi, series);
+                    var result = (cpi, series);
+                    _cpiCache[cacheKey] = result;
+                    return result;
                 }
             }
             throw new InvalidOperationException($"Could not retrieve CBS CPI for {month:MM-yyyy}.");
@@ -106,6 +121,9 @@ namespace AccountingHelper.Core.Services
         // = round( avg(all 12 monthly CPI values for refYear, in the preceding series), 1 decimal ) / 100
         private async Task<decimal> GetLinkingFactorForYearAsync(int refYear)
         {
+            if (_linkingFactorCache.TryGetValue(refYear, out var cachedLf))
+                return cachedLf;
+
             string url = $"https://api.cbs.gov.il/index/data/price?id={CpiIndexId}&startPeriod=01-{refYear}&endPeriod=12-{refYear}&format=json&lang=he&download=false&Page=1&PageSize=100";
             var json = await HttpRetryHelper.GetStringAsync(_http, url);
             using var doc = JsonDocument.Parse(json);
@@ -124,7 +142,9 @@ namespace AccountingHelper.Core.Services
 
             // CBS publishes CPI to 1 decimal; the annual average is also rounded to 1 decimal
             decimal avg = Math.Round(sum / count, 1, MidpointRounding.AwayFromZero);
-            return avg / 100m;
+            decimal lf  = avg / 100m;
+            _linkingFactorCache[refYear] = lf;
+            return lf;
         }
 
         private static int ExtractBaseYear(string series)
