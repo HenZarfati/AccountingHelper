@@ -31,6 +31,7 @@ namespace AccountingHelper.Core.Services
                 .ToDictionary(c => ws.Cell(1, c).GetString().Trim(), c => c);
 
             int colItemKey      = FindCol(headers, "מפתח פריט");
+            int colAccountKey   = FindCol(headers, "מפתח חשבון");
             int colItemName     = FindCol(headers, "שם פריט בחשבונית");
             int colCpi          = FindCol(headers, "מדד המחירים לצרכן");
             int colBaseIndex    = FindCol(headers, "מדד בסיס");
@@ -40,18 +41,35 @@ namespace AccountingHelper.Core.Services
             int colRate         = FindCol(headers, "שער");
             int colNotes        = FindCol(headers, "הערות להנה\"ח");
 
+            // Pre-scan: find the "הצמדה למדד" target row (מפתח חשבון=22211 AND שם פריט=הצמדה למדד)
+            int lastRow = ws.LastRowUsed().RowNumber();
+            int indexationTargetRow = -1;
+            if (colAccountKey > 0 && colItemName > 0)
+            {
+                for (int r = 2; r <= lastRow; r++)
+                {
+                    string ak = ws.Row(r).Cell(colAccountKey).GetString().Trim();
+                    string nm = ws.Row(r).Cell(colItemName).GetString().Trim();
+                    if (ak == "22211" && nm == "הצמדה למדד")
+                    {
+                        indexationTargetRow = r;
+                        break;
+                    }
+                }
+            }
+
             // Cache USD rate (fetched once, reused for all $ rows)
             decimal? usdRate = null;
 
-            int lastRow = ws.LastRowUsed().RowNumber();
             for (int r = 2; r <= lastRow; r++)
             {
                 var row = ws.Row(r);
 
-                string itemKey  = colItemKey  > 0 ? row.Cell(colItemKey).GetString().Trim()  : "";
-                string itemName = colItemName > 0 ? row.Cell(colItemName).GetString().Trim() : "";
-                string cpiFlag  = colCpi      > 0 ? row.Cell(colCpi).GetString().Trim()      : "";
-                string currency = colCurrency > 0 ? row.Cell(colCurrency).GetString().Trim() : "";
+                string itemKey   = colItemKey    > 0 ? row.Cell(colItemKey).GetString().Trim()    : "";
+                string accountKey = colAccountKey > 0 ? row.Cell(colAccountKey).GetString().Trim() : "";
+                string itemName  = colItemName   > 0 ? row.Cell(colItemName).GetString().Trim()   : "";
+                string cpiFlag   = colCpi        > 0 ? row.Cell(colCpi).GetString().Trim()        : "";
+                string currency  = colCurrency   > 0 ? row.Cell(colCurrency).GetString().Trim()   : "";
 
                 // 1. Copy שם פריט בחשבונית → הערות להנה"ח
                 if (colNotes > 0 && !string.IsNullOrEmpty(itemName))
@@ -75,7 +93,11 @@ namespace AccountingHelper.Core.Services
                         TryParseHebrewDate(indexDateStr, out DateTime baseDate))
                     {
                         decimal indexed = await _cpiService.CalculateIndexedAmountAsync(baseAmount, baseDate, targetDate);
-                        if (colPriceAfter > 0)
+
+                        // If מפתח חשבון = 22211, write result to the "הצמדה למדד" row instead of current row
+                        if (accountKey == "22211" && indexationTargetRow > 0 && colPriceAfter > 0)
+                            ws.Row(indexationTargetRow).Cell(colPriceAfter).Value = indexed;
+                        else if (colPriceAfter > 0)
                             row.Cell(colPriceAfter).Value = indexed;
                     }
                 }
