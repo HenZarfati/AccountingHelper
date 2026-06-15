@@ -1,6 +1,7 @@
 using ClosedXML.Excel;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -113,11 +114,30 @@ namespace AccountingHelper.Core.Services
                 // 3. CPI indexation
                 if (colCpi > 0 && cpiFlag == "צמוד")
                 {
-                    string baseIndexStr = colBaseIndex > 0 ? row.Cell(colBaseIndex).GetString().Trim() : "";
-                    string indexDateStr = colIndexDate > 0 ? row.Cell(colIndexDate).GetString().Trim() : "";
+                    // Read base amount — handle both Excel numeric cells and text cells
+                    decimal baseAmount = 0;
+                    if (colBaseIndex > 0)
+                    {
+                        var baseCell = row.Cell(colBaseIndex);
+                        try { baseAmount = (decimal)baseCell.GetDouble(); }
+                        catch
+                        {
+                            string s = StripInvisible(baseCell.GetString());
+                            if (!decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out baseAmount))
+                                decimal.TryParse(s, NumberStyles.Any, CultureInfo.CurrentCulture, out baseAmount);
+                        }
+                    }
 
-                    if (decimal.TryParse(baseIndexStr, out decimal baseAmount) &&
-                        TryParseHebrewDate(indexDateStr, out DateTime baseDate))
+                    // Read base date — handle both Excel date cells and text cells
+                    DateTime baseDate = DateTime.MinValue;
+                    if (colIndexDate > 0)
+                    {
+                        var dateCell = row.Cell(colIndexDate);
+                        try { baseDate = dateCell.GetDateTime(); }
+                        catch { TryParseHebrewDate(StripInvisible(dateCell.GetString()), out baseDate); }
+                    }
+
+                    if (baseAmount > 0 && baseDate != DateTime.MinValue)
                     {
                         decimal indexed = await _cpiService.CalculateIndexedAmountAsync(baseAmount, baseDate, targetDate);
 
@@ -126,6 +146,11 @@ namespace AccountingHelper.Core.Services
                             ws.Row(indexationTargetRow).Cell(colPriceAfter).Value = indexed;
                         else if (colPriceAfter > 0)
                             row.Cell(colPriceAfter).Value = indexed;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            $"שורה {r}: לא ניתן לקרוא את ערך המדד הבסיס ({baseAmount}) או תאריך המדד מהתא. בדוק את עמודות 'מדד בסיס' ו-'תאריך למדד'.");
                     }
                 }
 

@@ -16,11 +16,14 @@ namespace AccountingHelper.Core.Services
             _http.DefaultRequestHeaders.UserAgent.ParseAdd("AccountingHelper/1.0");
         }
 
-        // Returns target date: 25th of current month, or Sunday the 26th if 25th is Saturday
+        // Returns target date: 25th of current month if today >= 25, else 25th of previous month.
+        // If that date is Saturday, use Sunday instead.
         public static DateTime GetTargetDate()
         {
             var today = DateTime.Today;
-            var target = new DateTime(today.Year, today.Month, 25);
+            var target = today.Day >= 25
+                ? new DateTime(today.Year, today.Month, 25)
+                : new DateTime(today.Year, today.Month, 25).AddMonths(-1);
             if (target.DayOfWeek == DayOfWeek.Saturday)
                 target = target.AddDays(1);
             return target;
