@@ -17,8 +17,8 @@ namespace AccountingHelper.Core.Services
         // for every row in a file — without this each row repeats ~11 slow CBS calls.
         private static readonly ConcurrentDictionary<string, (decimal cpi, string series)> _cpiCache =
             new ConcurrentDictionary<string, (decimal, string)>();
-        private static readonly ConcurrentDictionary<int, decimal> _linkingFactorCache =
-            new ConcurrentDictionary<int, decimal>();
+        private static readonly ConcurrentDictionary<int, (decimal avg, int baseYear)> _annualCache =
+            new ConcurrentDictionary<int, (decimal, int)>();
 
         static CpiCalculatorService()
         {
@@ -55,7 +55,7 @@ namespace AccountingHelper.Core.Services
             if (baseSeries == targetSeries)
                 return Math.Round(baseAmount * ratio, 2);
 
-            decimal linkingFactor = await GetAccumulatedLinkingFactorAsync(baseSeries, targetSeries);
+            decimal linkingFactor = await GetAccumulatedLinkingFactorAsync(baseCpiMonth.Year, targetCpiMonth.Year);
             return Math.Round(baseAmount * ratio * linkingFactor, 2);
         }
 
@@ -98,61 +98,73 @@ namespace AccountingHelper.Core.Services
             throw new InvalidOperationException($"Could not retrieve CBS CPI for {month:MM-yyyy}.");
         }
 
-        // Computes the accumulated linking factor from fromSeries to toSeries.
-        // The CBS uses biennial base-year changes ("2006 ממוצע" → "2008 ממוצע" → ... → "2024 ממוצע").
-        // Each individual LF = round(annual average of the transition year, 1 decimal) / 100,
-        // where that year's monthly data is still in the preceding base series.
-        private async Task<decimal> GetAccumulatedLinkingFactorAsync(string fromSeries, string toSeries)
+        // Accumulates the CBS base-series linking factors crossed between the base month's
+        // calendar year and the target month's calendar year.
+        //
+        // CBS base years are NOT always two apart — the sequence jumps 2002 -> 2006 (no 2004
+        // base), so a fixed +2 step inserts phantom factors. Instead we read the actual
+        // base-series label each calendar year's data is published in and link into every
+        // distinct base we cross. The link into a base = that base year's annual average
+        // (still expressed in the preceding base), rounded to 1 decimal, / 100.
+        private async Task<decimal> GetAccumulatedLinkingFactorAsync(int fromCalendarYear, int toCalendarYear)
         {
-            int fromYear = ExtractBaseYear(fromSeries);
-            int toYear   = ExtractBaseYear(toSeries);
-
-            if (fromYear >= toYear)
-                throw new InvalidOperationException(
-                    $"Base series year ({fromYear}) must be earlier than target series year ({toYear}).");
-
             decimal accumulated = 1m;
-            int current = fromYear;
+            int? previousBaseYear = null;
 
-            while (current < toYear)
+            for (int year = fromCalendarYear; year <= toCalendarYear; year++)
             {
-                int next = current + 2; // CBS consistently uses 2-year base intervals
-                decimal lf = await GetLinkingFactorForYearAsync(next);
-                accumulated *= lf;
-                current = next;
+                var (_, baseYear) = await GetAnnualAsync(year);
+
+                if (previousBaseYear == null)
+                {
+                    previousBaseYear = baseYear; // starting base — nothing to link yet
+                    continue;
+                }
+
+                if (baseYear != previousBaseYear)
+                {
+                    // Crossed into a new base; its linking factor is that base year's
+                    // annual average (published in the previous base).
+                    var (linkAvg, _) = await GetAnnualAsync(baseYear);
+                    accumulated *= linkAvg / 100m;
+                    previousBaseYear = baseYear;
+                }
             }
 
             return accumulated;
         }
 
-        // Returns the single linking factor for transitioning into the "refYear ממוצע" series.
-        // = round( avg(all 12 monthly CPI values for refYear, in the preceding series), 1 decimal ) / 100
-        private async Task<decimal> GetLinkingFactorForYearAsync(int refYear)
+        // Returns (annual average rounded to 1 decimal, base-series year) for a calendar year. Cached.
+        private async Task<(decimal avg, int baseYear)> GetAnnualAsync(int year)
         {
-            if (_linkingFactorCache.TryGetValue(refYear, out var cachedLf))
-                return cachedLf;
+            if (_annualCache.TryGetValue(year, out var cached))
+                return cached;
 
-            string url = $"https://api.cbs.gov.il/index/data/price?id={CpiIndexId}&startPeriod=01-{refYear}&endPeriod=12-{refYear}&format=json&lang=he&download=false&Page=1&PageSize=100";
+            string url = $"https://api.cbs.gov.il/index/data/price?id={CpiIndexId}&startPeriod=01-{year}&endPeriod=12-{year}&format=json&lang=he&download=false&Page=1&PageSize=100";
             var json = await HttpRetryHelper.GetStringAsync(_http, url);
             using var doc = JsonDocument.Parse(json);
 
             var dates = doc.RootElement.GetProperty("month")[0].GetProperty("date");
             decimal sum = 0m;
             int count   = 0;
+            string baseDesc = "";
             foreach (var entry in dates.EnumerateArray())
             {
-                sum += entry.GetProperty("currBase").GetProperty("value").GetDecimal();
+                var currBase = entry.GetProperty("currBase");
+                sum += currBase.GetProperty("value").GetDecimal();
+                if (baseDesc.Length == 0)
+                    baseDesc = currBase.GetProperty("baseDesc").GetString() ?? "";
                 count++;
             }
 
             if (count == 0)
-                throw new InvalidOperationException($"No CBS CPI data found for year {refYear}.");
+                throw new InvalidOperationException($"No CBS CPI data found for year {year}.");
 
             // CBS publishes CPI to 1 decimal; the annual average is also rounded to 1 decimal
             decimal avg = Math.Round(sum / count, 1, MidpointRounding.AwayFromZero);
-            decimal lf  = avg / 100m;
-            _linkingFactorCache[refYear] = lf;
-            return lf;
+            var result = (avg, ExtractBaseYear(baseDesc));
+            _annualCache[year] = result;
+            return result;
         }
 
         private static int ExtractBaseYear(string series)
