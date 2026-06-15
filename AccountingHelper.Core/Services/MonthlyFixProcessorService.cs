@@ -112,7 +112,7 @@ namespace AccountingHelper.Core.Services
                 // If * in מפתח פריט — no change to שם פריט
 
                 // 3. CPI indexation
-                if (colCpi > 0 && cpiFlag == "צמוד")
+                if (colCpi > 0 && cpiFlag.Contains("צמוד"))
                 {
                     // Read base amount — handle both Excel numeric cells and text cells
                     decimal baseAmount = 0;

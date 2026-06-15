@@ -30,10 +30,11 @@ namespace AccountingHelper.Core.Services
         }
 
         // Calculates indexed amount: baseAmount × (targetCPI / baseCPI)
+        // CBS convention: uses CPI of the month BEFORE each reference date
         public async Task<decimal> CalculateIndexedAmountAsync(decimal baseAmount, DateTime baseDate, DateTime targetDate)
         {
-            decimal baseCpi = await GetCpiForMonthAsync(baseDate);
-            decimal targetCpi = await GetCpiForMonthAsync(targetDate);
+            decimal baseCpi   = await GetCpiForMonthAsync(baseDate.AddMonths(-1));
+            decimal targetCpi = await GetCpiForMonthAsync(targetDate.AddMonths(-1));
             return Math.Round(baseAmount * (targetCpi / baseCpi), 2);
         }
 
